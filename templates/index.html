@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Envíos Diarios</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        h1 { font-size: 1.8rem; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
+        .subtitle { color: #888; margin-bottom: 32px; font-size: 0.9rem; }
+        .controls { display: flex; gap: 12px; margin-bottom: 40px; align-items: center; }
+        input[type="date"] {
+            background: #1e2130; border: 1px solid #2e3250; color: #fff;
+            padding: 10px 16px; border-radius: 8px; font-size: 1rem; outline: none; cursor: pointer;
+        }
+        input[type="date"]:focus { border-color: #4e6ef2; }
+        button {
+            background: #4e6ef2; color: #fff; border: none;
+            padding: 10px 24px; border-radius: 8px; font-size: 1rem;
+            cursor: pointer; transition: background 0.2s;
+        }
+        button:hover { background: #3a57d4; }
+        button:disabled { background: #333; cursor: not-allowed; }
+        #btn-hoy {
+            background: #2e3250; color: #a0aec0; border: 1px solid #3a4070; padding: 10px 16px;
+        }
+        #btn-hoy:hover { background: #3a4070; color: #fff; }
+        #btn-timeline {
+            background: #1a1f35; color: #7f9cf5; border: 1px solid #3a4580;
+            padding: 10px 18px; display: flex; align-items: center; gap: 8px;
+            font-weight: 600; transition: all 0.2s;
+        }
+        #btn-timeline:hover { background: #252f55; color: #a5b4fc; border-color: #4e6ef2; }
+        #btn-timeline:disabled { opacity: 0.3; cursor: not-allowed; background: #1a1f35; }
+
+        .contenido { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 16px; }
+        .fecha-titulo { text-align: center; color: #888; font-size: 0.95rem; }
+
+        .banner { display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px; border-radius: 10px; font-size: 0.92rem; }
+        .banner.ok     { background: #0d2b1a; border: 1px solid #1e5c36; color: #68d391; }
+        .banner.warn   { background: #2b1a0d; border: 1px solid #7b4a1a; color: #f6ad55; }
+        .banner.danger { background: #2b0d0d; border: 1px solid #7b1a1a; color: #fc8181; }
+        .banner-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+        .banner-body { display: flex; flex-direction: column; gap: 6px; }
+        .banner-title { font-weight: 600; }
+        .banner-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .banner.warn .banner-list li { font-size: 0.86rem; color: #e2a870; }
+        .banner.warn .banner-list li span { font-weight: 600; color: #fbd38d; }
+        .banner.danger .banner-list li { font-size: 0.86rem; color: #feb2b2; }
+        .banner.danger .banner-list li span { font-weight: 600; color: #fc8181; }
+        .banner.danger .banner-list li .pedido { color: #fbd38d; }
+
+        .tablas-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .tabla-card { display: flex; flex-direction: column; gap: 10px; }
+        .tabla-card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0; padding-left: 4px; }
+        table { width: 100%; border-collapse: collapse; background: #1e2130; border-radius: 12px; overflow: hidden; }
+        thead tr { background: #2e3250; }
+        thead th { padding: 12px 18px; text-align: left; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0; }
+        thead th:last-child { text-align: right; }
+        tbody tr { border-bottom: 1px solid #2a2d3e; transition: background 0.15s; }
+        tbody tr:hover { background: #252840; }
+        tbody tr.sin-datos { opacity: 0.3; }
+        tbody td { padding: 11px 18px; font-size: 0.92rem; }
+        tbody td:last-child { text-align: right; font-weight: 600; color: #48bb78; }
+        tbody tr.sin-datos td:last-child { color: #555; }
+        .badge { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 10px; background: #48bb78; }
+        .badge.vacio { background: #444; }
+        tfoot tr { background: #252840; border-top: 2px solid #4e6ef2; }
+        tfoot td { padding: 12px 18px; font-weight: 700; color: #fff; }
+        tfoot td:last-child { text-align: right; color: #fbd38d; font-size: 1.05rem; }
+
+        .mayorista-bloque { background: #1e2130; border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+        .mayorista-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #2e3250; }
+        .mayorista-nombre { font-weight: 600; font-size: 0.95rem; color: #fff; }
+        .mayorista-badge-ok  { background: #1a3a5c; color: #63b3ed; font-size: 0.78rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .mayorista-badge-sin { background: #2a2a2a; color: #666; font-size: 0.78rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .mayorista-pedidos { padding: 10px 18px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .mayorista-pedido-tag { background: #252840; color: #a0aec0; font-size: 0.8rem; padding: 3px 10px; border-radius: 6px; font-family: monospace; }
+
+        .empty-state { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 48px 20px; background: #1e2130; border-radius: 12px; width: 100%; max-width: 700px; }
+        .empty-state .icon { font-size: 3rem; opacity: 0.4; }
+        .empty-state .title { font-size: 1.1rem; font-weight: 600; color: #a0aec0; }
+        .empty-state .desc { font-size: 0.9rem; color: #555; }
+
+        .error { color: #fc8181; margin-top: 16px; font-size: 0.9rem; text-align: center; }
+        .spinner { display: none; width: 20px; height: 20px; border: 2px solid #444; border-top-color: #4e6ef2; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ══════════════════════════════════════════════════════
+           MODAL — LÍNEA DE TIEMPO  (rediseño completo)
+        ══════════════════════════════════════════════════════ */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.82); z-index: 1000;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.15s ease;
+        }
+        .modal-overlay.open { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal {
+            background: #13162a;
+            border: 1px solid #252d50;
+            border-radius: 20px;
+            width: min(1060px, 95vw);
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(78,110,242,0.08);
+            overflow: hidden;
+            animation: slideUp 0.2s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(16px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
+
+        /* ── Header ── */
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 22px 32px;
+            background: linear-gradient(135deg, #1a1f3c 0%, #161a30 100%);
+            border-bottom: 1px solid #252d50;
+            flex-shrink: 0;
+        }
+        .modal-header-left { display: flex; flex-direction: column; gap: 4px; }
+        .modal-header-left h2 {
+            font-size: 1.2rem; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .modal-header-left h2 .badge-pill {
+            font-size: 0.7rem; font-weight: 600; padding: 2px 10px;
+            border-radius: 20px; background: #252d50; color: #7f9cf5;
+            border: 1px solid #3a4580; letter-spacing: 0.5px;
+        }
+        .modal-subtitulo { font-size: 0.82rem; color: #4a5280; font-weight: 500; }
+
+        #btn-cerrar-modal {
+            background: #1e2340; color: #6b7280; border: 1px solid #2e3560;
+            padding: 8px 18px; font-size: 0.85rem; border-radius: 10px;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        #btn-cerrar-modal:hover { background: #252d50; color: #e0e0e0; border-color: #4e6ef2; }
+
+        /* ── Resumen de totales ── */
+        .modal-resumen {
+            display: flex; flex-shrink: 0;
+            background: #0f1225;
+            border-bottom: 1px solid #1e2440;
+            overflow-x: auto;
+        }
+        .resumen-chip {
+            flex: 1; min-width: 110px;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 16px 12px;
+            border-right: 1px solid #1e2440;
+            position: relative; transition: background 0.15s;
+        }
+        .resumen-chip:last-child { border-right: none; }
+        .resumen-chip:hover { background: #141830; }
+        .resumen-chip .rc-icon { font-size: 1.1rem; margin-bottom: 4px; opacity: 0.7; }
+        .resumen-chip .rc-valor {
+            font-size: 1.8rem; font-weight: 900;
+            background: linear-gradient(135deg, #fbd38d, #f6ad55);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        .resumen-chip.verde .rc-valor {
+            background: linear-gradient(135deg, #68d391, #48bb78);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .resumen-chip.azul .rc-valor {
+            background: linear-gradient(135deg, #7f9cf5, #4e6ef2);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .resumen-chip .rc-label {
+            font-size: 0.68rem; color: #3a4280; text-transform: uppercase;
+            letter-spacing: 0.8px; font-weight: 600; margin-top: 4px; text-align: center;
+        }
+        /* Barra de progreso por transportista */
+        .resumen-chip .rc-bar-wrap {
+            width: 100%; height: 3px; background: #1e2440;
+            border-radius: 2px; margin-top: 8px; overflow: hidden;
+        }
+        .resumen-chip .rc-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+        /* ── Layout del cuerpo: dos columnas ── */
+        .modal-body {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* Columna izquierda: índice de horas */
+        .tl-sidebar {
+            background: #0d1020;
+            border-right: 1px solid #1a1e38;
+            overflow-y: auto;
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+        .tl-sidebar::-webkit-scrollbar { width: 4px; }
+        .tl-sidebar::-webkit-scrollbar-track { background: transparent; }
+        .tl-sidebar::-webkit-scrollbar-thumb { background: #2e3250; border-radius: 2px; }
+        .tl-sidebar-title {
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; color: #2e3560; padding: 0 16px 10px;
+        }
+        .sidebar-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 16px; cursor: pointer; transition: background 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-item:hover { background: #131830; }
+        .sidebar-item.activo { background: #141d3a; border-left-color: #4e6ef2; }
+        .sidebar-item .si-hora { font-size: 0.8rem; font-weight: 700; color: #4e6ef2; font-family: monospace; }
+        .sidebar-item .si-badge {
+            margin-left: auto; font-size: 0.68rem; font-weight: 700;
+            background: #1e2a4a; color: #7f9cf5;
+            padding: 1px 7px; border-radius: 10px;
+        }
+        .sidebar-item.activo .si-hora { color: #7f9cf5; }
+
+        /* Columna derecha: timeline scrollable */
+        .tl-main {
+            overflow-y: auto;
+            padding: 24px 32px;
+            scroll-behavior: smooth;
+        }
+        .tl-main::-webkit-scrollbar { width: 6px; }
+        .tl-main::-webkit-scrollbar-track { background: #0f1225; }
+        .tl-main::-webkit-scrollbar-thumb { background: #252d50; border-radius: 3px; }
+
+        /* ── Nodo de la timeline ── */
+        .tl-row {
+            display: flex; align-items: flex-start; gap: 0;
+            position: relative;
+        }
+
+        /* Hora + línea vertical */
+        .tl-left {
+            width: 56px; flex-shrink: 0;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 6px;
+        }
+        .tl-hora {
+            font-size: 0.72rem; font-weight: 800; color: #4e6ef2;
+            font-family: monospace; letter-spacing: 0.5px;
+        }
+        .tl-linea {
+            width: 2px;
+            background: linear-gradient(to bottom, #2e3560, #1a1e38);
+            flex: 1; min-height: 20px; margin-top: 6px;
+        }
+        .tl-row:last-child .tl-linea { display: none; }
+
+        /* Punto */
+        .tl-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid #2e3560; background: #0f1225;
+            flex-shrink: 0; margin-top: 8px; margin-left: -2px; margin-right: 16px;
+            transition: all 0.2s;
+        }
+        .tl-dot.nuevo {
+            background: #48bb78; border-color: #48bb78;
+            box-shadow: 0 0 10px rgba(72,187,120,0.5), 0 0 20px rgba(72,187,120,0.2);
+        }
+        .tl-dot.multi {
+            background: #4e6ef2; border-color: #7f9cf5;
+            box-shadow: 0 0 10px rgba(78,110,242,0.5), 0 0 20px rgba(78,110,242,0.2);
+        }
+
+        /* Tarjeta */
+        .tl-card {
+            flex: 1;
+            background: linear-gradient(135deg, #171b30 0%, #141828 100%);
+            border: 1px solid #1e2440;
+            border-radius: 14px;
+            padding: 14px 20px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .tl-card::before {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: #2e3560; border-radius: 14px 0 0 14px;
+            transition: background 0.2s;
+        }
+        .tl-card.nuevo::before { background: linear-gradient(to bottom, #48bb78, #2f855a); }
+        .tl-card.multi::before { background: linear-gradient(to bottom, #4e6ef2, #2b4acb); }
+        .tl-card:hover { border-color: #2e3a60; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+
+        /* Header de la tarjeta */
+        .tl-card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .tl-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .tl-card-num {
+            font-size: 0.75rem; color: #3a4280;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .tl-card-num strong { color: #6b7db0; font-size: 0.85rem; }
+
+        .tl-nuevo-label {
+            font-size: 0.72rem; font-weight: 700;
+            background: #0d2218; color: #68d391;
+            padding: 2px 9px; border-radius: 6px;
+            border: 1px solid #1a4a30;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .tl-nuevo-label::before { content: '+'; }
+
+        .tl-multi-label {
+            font-size: 0.72rem; font-weight: 700;
+            background: #0d1535; color: #7f9cf5;
+            padding: 2px 9px; border-radius: 6px;
+            border: 1px solid #2a3a70;
+        }
+
+        .tl-total-badge {
+            font-size: 0.9rem; font-weight: 900;
+            color: #fbd38d; white-space: nowrap;
+            display: flex; align-items: baseline; gap: 3px;
+        }
+        .tl-total-badge .tb-num { font-size: 1.3rem; line-height: 1; }
+        .tl-total-badge .tb-label { font-size: 0.7rem; color: #6b6040; font-weight: 600; }
+
+        /* Chips de transportistas */
+        .tl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .tl-chip {
+            display: flex; align-items: center; gap: 0;
+            background: #1a1e38; border: 1px solid #252d50;
+            border-radius: 8px; overflow: hidden;
+            transition: border-color 0.15s, transform 0.1s;
+        }
+        .tl-chip:hover { transform: translateY(-1px); border-color: #3a4580; }
+        .tl-chip .tc-nombre {
+            color: #8892b0; font-size: 0.8rem; font-weight: 500;
+            padding: 6px 10px 6px 12px;
+        }
+        .tl-chip .tc-num {
+            font-weight: 800; font-size: 0.85rem; color: #fff;
+            background: #2e3a5c; padding: 6px 12px;
+            border-left: 1px solid #3a4580;
+            min-width: 32px; text-align: center;
+        }
+
+        /* Chip resaltado (tuvo pedidos en este minuto) */
+        .tl-chip.nuevo-trans { border-color: #2a5040; }
+        .tl-chip.nuevo-trans .tc-nombre { color: #68d391; }
+        .tl-chip.nuevo-trans .tc-num { background: #1a4030; color: #68d391; border-left-color: #2a5040; }
+
+        /* Barra de progreso al fondo de la tarjeta */
+        .tl-progress {
+            margin-top: 12px;
+            height: 3px; background: #1a1e38; border-radius: 2px; overflow: hidden;
+        }
+        .tl-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4e6ef2, #7f9cf5);
+            border-radius: 2px; transition: width 0.4s ease;
+        }
+        .tl-card.nuevo .tl-progress-bar {
+            background: linear-gradient(90deg, #38a169, #68d391);
+        }
+
+        /* Empty */
+        .tl-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 20px; text-align: center; grid-column: 1 / -1; }
+        .tl-empty .icon { font-size: 3rem; opacity: 0.2; }
+        .tl-empty .msg { color: #3a4280; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>📦 Envíos Diarios</h1>
+    <p class="subtitle">Pedidos por transportista</p>
+
+    <div class="controls">
+        <input type="date" id="fecha" />
+        <button onclick="ponerHoy()" id="btn-hoy">Hoy</button>
+        <button onclick="consultar()" id="btn">Consultar</button>
+        <div class="spinner" id="spinner"></div>
+        <button id="btn-timeline" onclick="abrirTimeline()" disabled>📈 Línea de tiempo</button>
+    </div>
+
+    <div class="contenido" id="contenido" style="display:none">
+        <p class="fecha-titulo" id="fecha-titulo"></p>
+        <div class="banner ok" id="banner-ok">
+            <div class="banner-icon">✅</div>
+            <div class="banner-body"><div class="banner-title">Sin pedidos duplicados</div></div>
+        </div>
+        <div class="banner warn" id="banner-warn" style="display:none">
+            <div class="banner-icon">⚠️</div>
+            <div class="banner-body">
+                <div class="banner-title">Pedidos duplicados detectados</div>
+                <ul class="banner-list" id="dup-list"></ul>
+            </div>
+        </div>
+        <div class="banner ok" id="banner-dir-ok">
+            <div class="banner-icon">✅</div>
+            <div class="banner-body"><div class="banner-title">Sin direcciones de envío duplicadas</div></div>
+        </div>
+        <div class="banner danger" id="banner-dir-warn" style="display:none">
+            <div class="banner-icon">🔴</div>
+            <div class="banner-body">
+                <div class="banner-title">Direcciones de envío duplicadas</div>
+                <ul class="banner-list" id="dir-list"></ul>
+            </div>
+        </div>
+        <div class="tablas-row">
+            <div class="tabla-card">
+                <h2>Por transportista</h2>
+                <table>
+                    <thead><tr><th>Transportista</th><th style="text-align:right">Total pedidos</th></tr></thead>
+                    <tbody id="tbody"></tbody>
+                    <tfoot><tr><td>TOTAL</td><td id="total">0</td></tr></tfoot>
+                </table>
+            </div>
+            <div class="tabla-card">
+                <h2>Por mayorista</h2>
+                <div id="mayoristas-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="empty-state" id="empty">
+        <div class="icon">📭</div>
+        <div class="title">Sin pedidos este día</div>
+        <div class="desc" id="empty-fecha"></div>
+    </div>
+    <p class="error" id="error"></p>
+
+    <!-- ══════════════════════════════════════════════════════
+         MODAL LÍNEA DE TIEMPO
+    ══════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="modal-timeline">
+        <div class="modal">
+
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <h2>
+                        📈 Línea de tiempo del día
+                        <span class="badge-pill" id="modal-badge-franjas"></span>
+                    </h2>
+                    <div class="modal-subtitulo" id="modal-subtitulo"></div>
+                </div>
+                <button id="btn-cerrar-modal" onclick="cerrarTimeline()">✕ Cerrar</button>
+            </div>
+
+            <div class="modal-resumen" id="modal-resumen"></div>
+
+            <div class="modal-body" id="modal-body-grid">
+                <div class="tl-sidebar" id="tl-sidebar">
+                    <div class="tl-sidebar-title">Franjas</div>
+                </div>
+                <div class="tl-main" id="tl-main">
+                    <div class="tl-empty">
+                        <div class="icon">📋</div>
+                        <div class="msg">Consulta un día para ver la línea de tiempo.</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        let TRANSPORTISTAS = [];
+        let ultimaTimeline = [];
+        let ultimaFecha = "";
+
+        fetch("/transportistas")
+            .then(r => r.json())
+            .then(data => { if (data.transportistas) TRANSPORTISTAS = data.transportistas; });
+
+        document.getElementById("fecha").addEventListener("keydown", e => { if (e.key === "Enter") consultar(); });
+        document.addEventListener("keydown", e => {
+            if (e.key === "Enter" && !document.getElementById("btn").disabled) consultar();
+            if (e.key === "Escape") cerrarTimeline();
+        });
+
+        function ponerHoy() {
+            document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        }
+
+        function formatFecha(fecha) {
+            return new Date(fecha + "T12:00:00")
+                .toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+                .toLowerCase().replace(/^\w/, c => c.toUpperCase());
+        }
+
+        async function consultar() {
+            const fecha = document.getElementById("fecha").value;
+            if (!fecha) return;
+            const btn = document.getElementById("btn");
+            const spinner = document.getElementById("spinner");
+            btn.disabled = true;
+            spinner.style.display = "block";
+            document.getElementById("error").textContent = "";
+            document.getElementById("contenido").style.display = "none";
+            document.getElementById("empty").style.display = "none";
+            document.getElementById("btn-timeline").disabled = true;
+
+            try {
+                const res = await fetch("/consultar", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ fecha })
+                });
+                const data = await res.json();
+                if (data.error) { document.getElementById("error").textContent = "Error: " + data.error; return; }
+
+                const hayDatos = Object.values(data.datos).some(v => v > 0);
+                if (!hayDatos) {
+                    mostrarVacio(fecha);
+                } else {
+                    renderTabla(data.datos, fecha);
+                    renderDuplicados(data.duplicados);
+                    renderDirDuplicadas(data.dirDuplicadas);
+                    renderMayoristas(data.mayoristas);
+                    document.getElementById("contenido").style.display = "flex";
+                }
+
+                ultimaTimeline = data.timeline || [];
+                ultimaFecha = fecha;
+                if (ultimaTimeline.length > 0) {
+                    document.getElementById("btn-timeline").disabled = false;
+                }
+            } catch(e) {
+                document.getElementById("error").textContent = "Error de conexión";
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = "none";
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  MODAL
+        // ══════════════════════════════════════════════════════
+        function abrirTimeline() {
+            document.getElementById("modal-timeline").classList.add("open");
+            renderTimeline();
+        }
+        function cerrarTimeline() {
+            document.getElementById("modal-timeline").classList.remove("open");
+        }
+        document.getElementById("modal-timeline").addEventListener("click", function(e) {
+            if (e.target === this) cerrarTimeline();
+        });
+
+        function renderTimeline() {
+            const sidebar  = document.getElementById("tl-sidebar");
+            const main     = document.getElementById("tl-main");
+            const resumenEl = document.getElementById("modal-resumen");
+            const subtituloEl = document.getElementById("modal-subtitulo");
+            const badgeFranjas = document.getElementById("modal-badge-franjas");
+
+            if (!ultimaTimeline || ultimaTimeline.length === 0) {
+                main.innerHTML = `<div class="tl-empty"><div class="icon">📋</div><div class="msg">No hay datos de línea de tiempo.</div></div>`;
+                resumenEl.innerHTML = "";
+                sidebar.innerHTML = `<div class="tl-sidebar-title">Franjas</div>`;
+                return;
+            }
+
+            subtituloEl.textContent = formatFecha(ultimaFecha);
+
+            // ── Construir snapshots por minuto ──────────────────
+            const porMinuto = {};
+            ultimaTimeline.forEach(p => {
+                if (!porMinuto[p.hora]) porMinuto[p.hora] = [];
+                porMinuto[p.hora].push(p.transportista);
+            });
+
+            const snapshots = [];
+            const acumulado = {};
+            let totalAcum = 0;
+            let numPedido = 0;
+
+            Object.keys(porMinuto).sort().forEach(hora => {
+                const lista = porMinuto[hora];
+                const nuevos = {};
+                lista.forEach(t => {
+                    if (!acumulado[t]) acumulado[t] = 0;
+                    acumulado[t]++;
+                    totalAcum++;
+                    numPedido++;
+                    if (!nuevos[t]) nuevos[t] = 0;
+                    nuevos[t]++;
+                });
+                snapshots.push({
+                    hora,
+                    numHasta: numPedido,
+                    cantNuevos: lista.length,
+                    nuevosPorTransp: { ...nuevos },
+                    acumulado: { ...acumulado },
+                    total: totalAcum,
+                });
+            });
+
+            const totalFinal = snapshots[snapshots.length - 1].total;
+            badgeFranjas.textContent = `${snapshots.length} franjas`;
+
+            // Invertir para mostrar el más reciente primero
+            const snapshotsRender = [...snapshots].reverse();
+
+            // ── Resumen superior ────────────────────────────────
+            const ultimo = snapshots[snapshots.length - 1];
+            const transpConPedidos = Object.entries(ultimo.acumulado)
+                .filter(([, v]) => v > 0)
+                .sort((a, b) => b[1] - a[1]);
+            const maxTransp = transpConPedidos.length > 0 ? transpConPedidos[0][1] : 1;
+
+            const colores = ["verde", "azul", "", ""];
+            resumenEl.innerHTML = [
+                { valor: ultimaTimeline.length, label: "Total pedidos", icon: "📦", clase: "" },
+                { valor: snapshots.length,       label: "Franjas horarias", icon: "🕐", clase: "azul" },
+                ...transpConPedidos.map(([nombre, n], i) => ({
+                    valor: n, label: nombre, icon: "🚚", clase: colores[i] || "verde",
+                    pct: Math.round(n / totalFinal * 100)
+                }))
+            ].map(c => `
+                <div class="resumen-chip ${c.clase}">
+                    <div class="rc-icon">${c.icon}</div>
+                    <div class="rc-valor">${c.valor}</div>
+                    <div class="rc-label">${c.label}</div>
+                    ${c.pct !== undefined ? `
+                        <div class="rc-bar-wrap">
+                            <div class="rc-bar" style="width:${c.pct}%; background: ${c.clase === 'azul' ? '#4e6ef2' : '#48bb78'}"></div>
+                        </div>` : '<div style="height:11px"></div>'}
+                </div>
+            `).join("");
+
+            // ── Sidebar de horas ────────────────────────────────
+            sidebar.innerHTML = `<div class="tl-sidebar-title">Franjas</div>` +
+                snapshotsRender.map((s, i) => `
+                    <div class="sidebar-item" id="si-${i}" onclick="scrollToSnap(${i})">
+                        <span class="si-hora">${s.hora}</span>
+                        <span class="si-badge">+${s.cantNuevos}</span>
+                    </div>
+                `).join("");
+
+            // ── Nodos de la timeline ────────────────────────────
+            let html = "";
+            snapshotsRender.forEach((snap, idx) => {
+                const esMulti  = snap.cantNuevos > 1;
+                const esNuevo  = snap.cantNuevos === 1;
+                const claseCard = esMulti ? "multi" : esNuevo ? "nuevo" : "";
+                const claseDot  = esMulti ? "multi" : esNuevo ? "nuevo" : "";
+                const pct = Math.round(snap.total / totalFinal * 100);
+
+                const chipsHtml = Object.entries(snap.acumulado)
+                    .filter(([, n]) => n > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([nombre, n]) => {
+                        const nuevosAqui = snap.nuevosPorTransp[nombre] || 0;
+                        return `<div class="tl-chip ${nuevosAqui > 0 ? 'nuevo-trans' : ''}">
+                            <span class="tc-nombre">${nombre}</span>
+                            <span class="tc-num">${n}</span>
+                        </div>`;
+                    }).join("");
+
+                const etiqueta = esMulti
+                    ? `<span class="tl-multi-label">${snap.cantNuevos} nuevos</span>`
+                    : esNuevo
+                    ? `<span class="tl-nuevo-label">${snap.cantNuevos} nuevo</span>`
+                    : "";
+
+                html += `
+                <div class="tl-row" id="snap-${idx}">
+                    <div class="tl-left">
+                        <span class="tl-hora">${snap.hora}</span>
+                        <div class="tl-linea"></div>
+                    </div>
+                    <div class="tl-dot ${claseDot}"></div>
+                    <div class="tl-card ${claseCard}">
+                        <div class="tl-card-header">
+                            <div class="tl-card-meta">
+                                <span class="tl-card-num">Pedido <strong>#${snap.numHasta}</strong> / ${ultimaTimeline.length}</span>
+                                ${etiqueta}
+                            </div>
+                            <div class="tl-total-badge">
+                                <span class="tb-num">${snap.total}</span>
+                                <span class="tb-label">pedidos</span>
+                            </div>
+                        </div>
+                        <div class="tl-chips">${chipsHtml}</div>
+                        <div class="tl-progress">
+                            <div class="tl-progress-bar" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            main.innerHTML = html;
+
+            // Resaltar sidebar al hacer scroll
+            const tlMain = document.getElementById("tl-main");
+            tlMain.addEventListener("scroll", onScrollTimeline, { passive: true });
+        }
+
+        function scrollToSnap(idx) {
+            const el = document.getElementById(`snap-${idx}`);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            document.querySelectorAll(".sidebar-item").forEach(s => s.classList.remove("activo"));
+            const si = document.getElementById(`si-${idx}`);
+            if (si) si.classList.add("activo");
+        }
+
+        function onScrollTimeline() {
+            const main = document.getElementById("tl-main");
+            const items = main.querySelectorAll(".tl-row");
+            let closest = 0;
+            let minDist = Infinity;
+            items.forEach((el, i) => {
+                const dist = Math.abs(el.getBoundingClientRect().top - main.getBoundingClientRect().top);
+                if (dist < minDist) { minDist = dist; closest = i; }
+            });
+            document.querySelectorAll(".sidebar-item").forEach(s => s.classList.remove("activo"));
+            const si = document.getElementById(`si-${closest}`);
+            if (si) {
+                si.classList.add("activo");
+                si.scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        // ── Render principal ────────────────────────────────────
+        function renderDuplicados(duplicados) {
+            const bannerOk   = document.getElementById("banner-ok");
+            const bannerWarn = document.getElementById("banner-warn");
+            const dupList    = document.getElementById("dup-list");
+            if (!duplicados || duplicados.length === 0) {
+                bannerOk.style.display = "flex"; bannerWarn.style.display = "none";
+            } else {
+                bannerOk.style.display = "none"; bannerWarn.style.display = "flex";
+                dupList.innerHTML = duplicados.map(d =>
+                    `<li>Pedido <span>${d.suPedido}</span> aparece <span>${d.veces} veces</span></li>`
+                ).join("");
+            }
+        }
+
+        function renderDirDuplicadas(dirs) {
+            const bannerOk   = document.getElementById("banner-dir-ok");
+            const bannerWarn = document.getElementById("banner-dir-warn");
+            const dirList    = document.getElementById("dir-list");
+            if (!dirs || dirs.length === 0) {
+                bannerOk.style.display = "flex"; bannerWarn.style.display = "none";
+            } else {
+                bannerOk.style.display = "none"; bannerWarn.style.display = "flex";
+                const grupos = {};
+                dirs.forEach(d => {
+                    const key = d.nombre + "|" + d.direccion;
+                    if (!grupos[key]) grupos[key] = { nombre: d.nombre, direccion: d.direccion, pedidos: [] };
+                    grupos[key].pedidos.push(d.referencia);
+                });
+                dirList.innerHTML = Object.values(grupos).map(g =>
+                    `<li><span>${g.nombre}</span> — ${g.direccion} — Pedidos: <span class="pedido">${g.pedidos.join(", ")}</span></li>`
+                ).join("");
+            }
+        }
+
+        function renderMayoristas(mayoristas) {
+            const container = document.getElementById("mayoristas-container");
+            container.innerHTML = "";
+            mayoristas.forEach(m => {
+                const tienePedidos = m.pedidos.length > 0;
+                const bloque = document.createElement("div");
+                bloque.className = "mayorista-bloque";
+                const tags = tienePedidos
+                    ? `<div class="mayorista-pedidos">${m.pedidos.map(p => `<span class="mayorista-pedido-tag">${p}</span>`).join("")}</div>`
+                    : "";
+                bloque.innerHTML = `
+                    <div class="mayorista-header">
+                        <span class="mayorista-nombre">${m.nombre}</span>
+                        <span class="${tienePedidos ? 'mayorista-badge-ok' : 'mayorista-badge-sin'}">
+                            ${tienePedidos ? m.pedidos.length + ' pedido' + (m.pedidos.length > 1 ? 's' : '') : 'Sin pedidos'}
+                        </span>
+                    </div>${tags}`;
+                container.appendChild(bloque);
+            });
+        }
+
+        function mostrarVacio(fecha) {
+            document.getElementById("empty-fecha").textContent = "No se registraron envíos el " + formatFecha(fecha);
+            document.getElementById("empty").style.display = "flex";
+        }
+
+        function renderTabla(datos, fecha) {
+            const tbody = document.getElementById("tbody");
+            tbody.innerHTML = "";
+            let total = 0;
+            const conDatos = TRANSPORTISTAS.filter(t => datos[t] > 0);
+            const sinDatos = TRANSPORTISTAS.filter(t => !datos[t]);
+            [...conDatos, ...sinDatos].forEach(nombre => {
+                const cantidad = datos[nombre] || 0;
+                total += cantidad;
+                const tr = document.createElement("tr");
+                if (!cantidad) tr.classList.add("sin-datos");
+                tr.innerHTML = `<td><span class="badge ${cantidad ? '' : 'vacio'}"></span>${nombre}</td><td>${cantidad || "—"}</td>`;
+                tbody.appendChild(tr);
+            });
+            Object.entries(datos).forEach(([nombre, cantidad]) => {
+                if (!TRANSPORTISTAS.includes(nombre) && cantidad > 0) {
+                    total += cantidad;
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `<td><span class="badge"></span>${nombre}</td><td>${cantidad}</td>`;
+                    tbody.appendChild(tr);
+                }
+            });
+            document.getElementById("total").textContent = total;
+            document.getElementById("fecha-titulo").textContent = formatFecha(fecha);
+        }
+    </script>
+</body>
+</html>
